@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <attr name="ChartStyle" />
+    <declare-styleable name="BaseChart">
+        <attr name="borderRadius" format="dimension"></attr>
+        <attr name="borderWidth" format="dimension"></attr>
+        <attr name="borderColor" format="color"></attr>
+    </declare-styleable>
+</resources>
