@@ -2,22 +2,15 @@ package dong.project.chart.base
 
 import android.R.attr.maxHeight
 import android.R.attr.maxWidth
-import android.R.attr.strokeWidth
 import android.content.Context
 import android.content.res.TypedArray
-import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.drawable.GradientDrawable
+import android.graphics.Paint
 import android.util.AttributeSet
-import android.view.MotionEvent
-import android.view.View
 import android.widget.FrameLayout
 import android.widget.Toast
-import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.content.ContextCompat
 import androidx.core.view.setPadding
 import dong.project.chart.R
-import java.util.Objects
 
 abstract class BaseChart @JvmOverloads constructor(
     context: Context,
@@ -54,8 +47,18 @@ abstract class BaseChart @JvmOverloads constructor(
         this.topDef = top
         this.bottomDef = bottom
         this.rightDef = right
+        textPaint.apply {
+            textSize = width * 0.032f
+        }
         invalidate()
     }
+
+    val textPaint = Paint().apply {
+        color = Color.BLACK
+        textSize = 40f
+        textAlign = Paint.Align.CENTER
+    }
+
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         var widthMeasureSpec = widthMeasureSpec
         var heightMeasureSpec = heightMeasureSpec
