@@ -1,5 +1,6 @@
 package dong.project.chart.chart
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
@@ -11,13 +12,11 @@ import android.view.MotionEvent
 import dong.project.chart.base.BaseChart
 import dong.project.chart.drawRoundRectPath
 
-class ColumnChart @JvmOverloads constructor(
+class LineChart @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
 ) : BaseChart(context, attrs, defStyleAttr) {
-
-    private var listColumn = mutableListOf<RectF>()
     private var listVertical = mutableListOf<Int>()
     private var maxValue = 0
 
@@ -34,14 +33,14 @@ class ColumnChart @JvmOverloads constructor(
     }
 
     private var columnPaint = Paint().apply {
-        strokeWidth = 1f
+        strokeWidth = 3f
         color = Color.parseColor("#cccCCC")
         style = Paint.Style.FILL
     }
     private var listData = mutableListOf<Int>()
 
-    fun setData(listData: MutableList<Int>): ColumnChart {
-        listColumn.clear()
+    fun setData(listData: MutableList<Int>): LineChart {
+        listPoint.clear()
         this.listData = listData
         calculateMinMax(listData)
         calculateVerticalValues()
@@ -50,7 +49,7 @@ class ColumnChart @JvmOverloads constructor(
         return this
     }
 
-    fun columnColor(colors: Int): ColumnChart {
+    fun columnColor(colors: Int): LineChart {
         this.columnPaint.apply {
             color = colors
         }
@@ -58,7 +57,7 @@ class ColumnChart @JvmOverloads constructor(
         return this
     }
 
-    fun chartName(name: String): ColumnChart {
+    fun chartName(name: String): LineChart {
         chartName = name
         invalidate()
         return this
@@ -66,7 +65,7 @@ class ColumnChart @JvmOverloads constructor(
 
     private var listHorizontalValue = mutableListOf<String>()
 
-    fun verticalValue(list: MutableList<String>): ColumnChart {
+    fun verticalValue(list: MutableList<String>): LineChart {
         this.listHorizontalValue = list
         return this
     }
@@ -78,10 +77,12 @@ class ColumnChart @JvmOverloads constructor(
         invalidate()
     }
 
+    private val listPoint = mutableListOf<PointF>()
     private fun calculateColumns() {
-        listColumn.clear()
+        listPoint.clear()
         val chartWidth = endX - startX
         val space = chartWidth / (2 * listData.size)
+        this.spaceWidth = space
         val colWidth = space
         val chartHeight = startY - endY
         startX += space / 2
@@ -92,7 +93,7 @@ class ColumnChart @JvmOverloads constructor(
             rectF.top = columnHeight
             rectF.right = rectF.left + colWidth
             rectF.bottom = startY
-            listColumn.add(rectF)
+            listPoint.add(PointF(rectF.right - rectF.width() / 2f, rectF.top))
         }
     }
 
@@ -137,19 +138,19 @@ class ColumnChart @JvmOverloads constructor(
         endY = height * 0.16f
 
         textPaint.apply {
-            textSize = canvas.width*0.032f
+            textSize = canvas.width * 0.032f
         }
 
         drawAxits(canvas)
-        drawColumns(canvas)
+        drawPointAndLine(canvas)
         drawVertical(canvas)
         drawHorValue(canvas)
         drawChartName(canvas)
         if (isGloss) {
             drawGloss(canvas)
         }
-        if(isTouch&& columnSelected!=-1 ){
-            drawBoxValue(canvas,columnSelected)
+        if (isTouch && columnSelected != -1) {
+            drawBoxValue(canvas, columnSelected)
         }
         invalidate()
     }
@@ -175,11 +176,11 @@ class ColumnChart @JvmOverloads constructor(
     }
 
     private fun drawHorValue(canvas: Canvas) {
-        if (listHorizontalValue.size == listColumn.size) {
-            listColumn.forEachIndexed { index, rectF ->
+        if (listHorizontalValue.size == listPoint.size) {
+            listPoint.forEachIndexed { index, rectF ->
                 val text = listHorizontalValue[index]
 
-                val centerX = rectF.left + rectF.width() / 2f
+                val centerX = rectF.x
                 val textX = centerX
                 canvas.drawText(text, textX, canvas.height * 0.91f, textPaint)
             }
@@ -204,7 +205,7 @@ class ColumnChart @JvmOverloads constructor(
     private var isGloss = false
     private var glName = ""
 
-    fun setGloss(isGloss: Boolean, glName: String): ColumnChart {
+    fun setGloss(isGloss: Boolean, glName: String): LineChart {
         this.isGloss = isGloss
         this.glName = glName
         return this
@@ -217,7 +218,9 @@ class ColumnChart @JvmOverloads constructor(
     }
 
     private var centerPointRect = PointF(0f, 0f)
-    private var columnSelected= -1
+    private var columnSelected = -1
+
+    @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
         when (event.action and MotionEvent.ACTION_MASK) {
             MotionEvent.ACTION_DOWN -> {
@@ -231,36 +234,69 @@ class ColumnChart @JvmOverloads constructor(
         return true
     }
 
-    fun getIndexByPoint(
+    private var spaceWidth = 0f
+
+    private fun getIndexByPoint(
         event: MotionEvent,
         calback: (Int, PointF) -> Unit
     ) {
-        listColumn.forEachIndexed { index, rectF ->
-            if (rectF.left <= event.x && rectF.right > event.x) {
-                val pointX = rectF.left + (rectF.right - rectF.left) / 2
-                var pointF = PointF(pointX, event.y)
-                calback(index, pointF)
+        var firstPointLineX: Float
+        var secondPointLineX: Float
+        listPoint.forEachIndexed { index, pointF ->
+            var indexVal = index
+            indexVal.coerceIn(0, listPoint.size)
+            if (indexVal >= listPoint.size - 1) {
+                firstPointLineX =
+                    listPoint.get((indexVal - 1).coerceIn(0, listPoint.size - 1)).x + spaceWidth / 2
+                secondPointLineX =
+                    listPoint.get(indexVal.coerceIn(0, listPoint.size - 1)).x + spaceWidth / 2
+            } else if (indexVal == 0) {
+                firstPointLineX = listPoint.get(0).x - spaceWidth / 2
+                secondPointLineX =
+                    listPoint[(indexVal + 1).coerceIn(0, listPoint.size - 1)].x - spaceWidth / 2
+            } else {
+                firstPointLineX = listPoint.get(indexVal - 1).x + spaceWidth / 2
+                secondPointLineX =
+                    listPoint.get((indexVal + 1).coerceIn(0, listPoint.size - 1)).x - spaceWidth / 2
+            }
+            if (event.x in firstPointLineX..secondPointLineX) {
+                calback(indexVal, pointF)
             }
         }
+        invalidate()
     }
+
     private var isTouch = false
-    fun isValue(isShow: Boolean): ColumnChart {
-        this.isTouch=isShow
+    fun isValue(isShow: Boolean): LineChart {
+        this.isTouch = isShow
         return this
     }
 
-    private fun drawColumns(canvas: Canvas) {
+    private fun drawPointAndLine(canvas: Canvas) {
         initColumn()
-        listColumn.forEach { rectF ->
-            canvas.drawRoundRectPath(
-                rectF,
-                rectF.width() / 4,
-                true,
-                true,
-                false,
-                false,
+        var firstPointLineX = 0f
+        var secondPointLineX = 0f
+        var firstPointLineY = 0f
+        var secondPointLineY = 0f
+        listPoint.forEachIndexed { index, pointF ->
+            firstPointLineX = pointF.x
+            firstPointLineY = pointF.y
+            if (index >= listPoint.size - 1) {
+                secondPointLineX = listPoint.get(index).x
+                secondPointLineY = listPoint.get(index).y
+            } else {
+                secondPointLineX = listPoint.get(index + 1).x
+                secondPointLineY = listPoint.get(index + 1).y
+            }
+            canvas.drawLine(
+                firstPointLineX,
+                firstPointLineY,
+                secondPointLineX,
+                secondPointLineY,
                 columnPaint
             )
+
+            canvas.drawCircle(pointF.x, pointF.y, 6f, columnPaint)
         }
     }
 
@@ -297,8 +333,8 @@ class ColumnChart @JvmOverloads constructor(
         val boxWidth = boxHeight * 1.72f
         val top = height * 0.015f
 
-        val selectedColumnRect = listColumn.getOrNull(columnSelected)
-        val centerX = selectedColumnRect?.let { it.left + it.width() / 2 } ?: centerPointRect.x
+        val selectedColumnRect = listData.getOrNull(columnSelected)
+        val centerX = centerPointRect.x
 
         var startPoint = centerX - boxWidth / 2
 
@@ -309,8 +345,8 @@ class ColumnChart @JvmOverloads constructor(
             true, true, true, true, columnPaint
         )
 
-        val recDraw = listColumn[columnSelected]
-        val bottomPoint = recDraw.top - 10f
+        val recDraw = listPoint[columnSelected]
+        val bottomPoint = recDraw.y - 10f
         canvas.drawLine(
             centerX,
             top + boxHeight,
@@ -321,8 +357,8 @@ class ColumnChart @JvmOverloads constructor(
 
         val text = listData[columnSelected]
         val textPaint = Paint().apply {
-            color= Color.WHITE
-            textSize = canvas.width*0.034f
+            color = Color.WHITE
+            textSize = canvas.width * 0.034f
             textAlign = Paint.Align.CENTER
 
         }

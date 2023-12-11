@@ -8,7 +8,7 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <dong.duan.customchart.chart.ColumnChart
+    <dong.project.chart.chart.ColumnChart
         android:layout_width="match_parent"
         android:layout_height="@dimen/_280sdp"
         app:borderWidth="@dimen/_1sdp"
