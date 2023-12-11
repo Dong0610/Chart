@@ -13,8 +13,6 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
-
-
         binding.view
             .setData(mutableListOf(10, 15, 50, 20, 30, 10))
             .chartName("Bieu do cot luong mua")
